@@ -128,5 +128,90 @@ single topic can be scaled horizontally across multiple servers to provide perfo
 far beyond the ability of a single server.
 
 
+The term stream is often used when discussing data within systems like Kafka. Most
+often, a stream is considered to be a single topic of data, regardless of the number of
+partitions. This represents a single stream of data moving from the producers to the
+consumers.
+
+Producers and Consumers
+
+Kafka clients are users of the system, and there are two basic types: producers and
+consumers. There are also advanced client APIs—Kafka Connect API for data inte‐
+gration and Kafka Streams for stream processing. The advanced clients use producers
+and consumers as building blocks and provide higher-level functionality on top.
+
+Producers create new messages. In other publish/subscribe systems, these may be
+called publishers or writers. In general, a message will be produced to a specific topic.
+By default, the producer does not care what partition a specific message is written to
+and will balance messages over all partitions of a topic evenly. In some cases, the pro‐
+ducer will direct messages to specific partitions. This is typically done using the mes‐
+sage key and a partitioner that will generate a hash of the key and map it to a specific
+partition. This assures that all messages produced with a given key will get written to
+the same partition. The producer could also use a custom partitioner that follows
+other business rules for mapping messages to partitions.
+
+Consumers read messages. In other publish/subscribe systems, these clients may be
+called subscribers or readers. The consumer subscribes to one or more topics and
+reads the messages in the order in which they were produced. The consumer keeps
+track of which messages it has already consumed by keeping track of the offset of
+messages. The offset is another bit of metadata—an integer value that continually
+increases—that Kafka adds to each message as it is produced. Each message in a given
+partition has a unique offset. By storing the offset of the last consumed message for
+each partition, either in Zookeeper or in Kafka itself, a consumer can stop and restart
+without losing its place.
+
+Consumers work as part of a consumer group, which is one or more consumers that
+work together to consume a topic. The group assures that each partition is only con‐
+sumed by one member.
+
+In Figure 1-6, there are three consumers in a single group
+consuming a topic. Two of the consumers are working from one partition each, while
+the third consumer is working from two partitions. The mapping of a consumer to a
+partition is often called ownership of the partition by the consumer.
+
+In this way, consumers can horizontally scale to consume topics with a large number
+of messages. Additionally, if a single consumer fails, the remaining members of the
+group will rebalance the partitions being consumed to take over for the missing
+member.
+
+Brokers and Clusters
+
+A single Kafka server is called a broker. The broker receives messages from producers, assigns offsets to them, and commits the messages to storage on disk. It also services consumers, responding to fetch requests for partitions and responding with the messages that have been committed to disk. Depending on the specific hardware and its performance characteristics, a single broker can easily handle thousands of partitions and millions of messages per second.
 
 
+
+Kafka brokers are designed to operate as part of a cluster. Within a cluster of brokers, one broker will also function as the cluster controller (elected automatically from the live members of the cluster). The controller is responsible for administrative operations, including assigning partitions to brokers and monitoring for broker failures. A partition is owned by a single broker in the cluster, and that broker is called the leader of the partition. A partition may be assigned to multiple brokers, which will result in the partition being replicated (as seen in Figure 1-7). This provides redundancy of messages in the partition, such that another broker can take over leadership if there is a broker failure. However, all consumers and producers operating on that partition must connect to the leader.
+
+A key feature of Apache Kafka is that of retention, which is the durable storage of messages for some period of time. Kafka brokers are configured with a default retention setting for topics, either retaining messages for some period of time (e.g., 7 days) or until the topic reaches a certain size in bytes (e.g., 1 GB). Once these limits are reached, messages are expired and deleted so that the retention configuration is a minimum amount of data available at any time. Individual topics can also be configured with their own retention settings so that messages are stored for only as long as they are useful. For example, a tracking topic might be retained for several days, whereas application metrics might be retained for only a few hours. Topics can also be configured as log compacted, which means that Kafka will retain only the last message produced with a specific key. This can be useful for changelog-type data, where only the last update is interesting.
+
+
+The replication mechanisms within the Kafka clusters are designed only to work within a single cluster, not between multiple clusters.
+
+The Kafka project includes a tool called MirrorMaker, used for this purpose. At its core, MirrorMaker is simply a Kafka consumer and producer, linked together with a queue. Messages are consumed from one Kafka cluster and produced for another. 
+
+Figure 1-8 shows an example of an architecture that uses MirrorMaker, aggregating messages from two local clusters into an aggregate cluster, and then copying that cluster to other datacenters. The simple nature of the application belies its power in creating sophisticated data pipelines, which will be detailed further in Chapter 7.
+
+
+Why Kafka?
+There are many choices for publish/subscribe messaging systems, so what makes Apache Kafka a good choice?
+
+Multiple Producers
+
+Multiple Consumers
+
+Disk-Based Retention
+
+Not only can Kafka handle multiple consumers, but durable message retention means that consumers do not always need to work in real time. Messages are committed to disk, and will be stored with configurable retention rules. These options can be selected on a per-topic basis, allowing for different streams of messages to have different amounts of retention depending on the consumer needs. Durable retention means that if a consumer falls behind, either due to slow processing or a burst in traffic, there is no danger of losing data. It also means that maintenance can be performed on consumers, taking applications offline for a short period of time, with no concern about messages backing up on the producer or getting lost. Consumers can be stopped, and the messages will be retained in Kafka. This allows them to restart and pick up processing messages where they left off with no data loss.
+
+
+
+Scalable
+
+Kafka’s flexible scalability makes it easy to handle any amount of data. Users can start with a single broker as a proof of concept, expand to a small development cluster of three brokers, and move into production with a larger cluster of tens or even hundreds of brokers that grows over time as the data scales up. Expansions can be performed while the cluster is online, with no impact on the availability of the system as a whole. This also means that a cluster of multiple brokers can handle the failure of an individual broker, and continue servicing clients. Clusters that need to tolerate more simultaneous failures can be configured with higher replication factors. 
+
+High Performance
+
+All of these features come together to make Apache Kafka a publish/subscribe messaging system with excellent performance under high load. Producers, consumers, and brokers can all be scaled out to handle very large message streams with ease. This can be done while still providing subsecond message latency from producing a message to availability to consumers.
+
+Kafka’s Origin
+Kafka was created to address the data pipeline problem at LinkedIn. It was designed to provide a high-performance messaging system that can handle many types of data and provide clean, structured data about user activity and system metrics in real time.
