@@ -261,3 +261,106 @@ Outside of using a single ensemble for multiple Kafka clusters, it is not recomm
 
 https://learning.oreilly.com/library/view/kafka-the-definitive/9781491936153/ch03.html
 
+Chapter 3. Kafka Producers: Writing Messages to Kafka
+
+There are many reasons an application might need to write messages to Kafka: recording user activities for auditing or analysis, recording metrics, storing log messages, recording information from smart appliances, communicating asynchronously with other applications, buffering information before writing to a database, and much more.
+
+Those diverse use cases also imply diverse requirements: is every message critical, or can we tolerate loss of messages? Are we OK with accidentally duplicating messages? Are there any strict latency or throughput requirements we need to support?
+
+In the credit card transaction processing example we introduced earlier, we can see that it is critical to never lose a single message nor duplicate any messages. Latency should be low but latencies up to 500ms can be tolerated, and throughput should be very high—we expect to process up to a million messages a second.
+
+A different use case might be to store click information from a website. In that case, some message loss or a few duplicates can be tolerated; latency can be high as long as there is no impact on the user experience. In other words, we don’t mind if it takes a few seconds for the message to arrive at Kafka, as long as the next page loads immediately after the user clicked on a link. Throughput will depend on the level of activity we anticipate on our website.
+
+The different requirements will influence the way you use the producer API to write messages to Kafka and the configuration you use.
+
+We start producing messages to Kafka by creating a ProducerRecord, which must include the topic we want to send the record to and a value. Optionally, we can also specify a key and/or a partition. Once we send the ProducerRecord, the first thing the producer will do is serialize the key and value objects to ByteArrays so they can be sent over the network.
+
+Next, the data is sent to a partitioner. If we specified a partition in the ProducerRecord, the partitioner doesn’t do anything and simply returns the partition we specified. If we didn’t, the partitioner will choose a partition for us, usually based on the ProducerRecord key. Once a partition is selected, the producer knows which topic and partition the record will go to. It then adds the record to a batch of records that will also be sent to the same topic and partition. A separate thread is responsible for sending those batches of records to the appropriate Kafka brokers.
+
+When the broker receives the messages, it sends back a response. If the messages were successfully written to Kafka, it will return a RecordMetadata object with the topic, partition, and the offset of the record within the partition. If the broker failed to write the messages, it will return an error. When the producer receives an error, it may retry sending the message a few more times before giving up and returning an error.
+
+
+
+Properties kafkaProps = new Properties(); 1
+kafkaProps.put("bootstrap.servers", "broker1:9092,broker2:9092");
+
+kafkaProps.put("key.serializer",
+    "org.apache.kafka.common.serialization.StringSerializer"); 2
+kafkaProps.put("value.serializer",
+    "org.apache.kafka.common.serialization.StringSerializer");
+
+producer = new KafkaProducer<String, String>(kafkaProps); 3
+
+
+Once we instantiate a producer, it is time to start sending messages. There are three primary methods of sending messages:
+
+Fire-and-forget
+
+We send a message to the server and don’t really care if it arrives succesfully or not. Most of the time, it will arrive successfully, since Kafka is highly available and the producer will retry sending messages automatically. However, some messages will get lost using this method.
+
+ProducerRecord<String, String> record =
+    new ProducerRecord<>("CustomerCountry", "Precision Products",
+        "France"); 1
+try {
+    producer.send(record); 2
+} catch (Exception e) {
+    e.printStackTrace(); 3
+}
+
+
+Synchronous send
+
+We send a message, the send() method returns a Future object, and we use get() to wait on the future and see if the send() was successful or not.
+
+ProducerRecord<String, String> record =
+    new ProducerRecord<>("CustomerCountry", "Precision Products", "France");
+try {
+    producer.send(record).get(); 1
+} catch (Exception e) {
+    e.printStackTrace(); 2
+}
+
+
+
+Asynchronous send
+
+We call the send() method with a callback function, which gets triggered when it receives a response from the Kafka broker.
+
+
+private class DemoProducerCallback implements Callback { 1
+    @Override
+    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if (e != null) {
+            e.printStackTrace(); 2
+        }
+    }
+}
+
+ProducerRecord<String, String> record =
+    new ProducerRecord<>("CustomerCountry", "Biomedical Materials", "USA"); 3
+producer.send(record, new DemoProducerCallback()); 4
+
+
+Configuring Producers
+
+So far we’ve seen very few configuration parameters for the producers—just the mandatory bootstrap.servers URI and serializers.
+
+The producer has a large number of configuration parameters; most are documented in Apache Kafka documentation and many have reasonable defaults so there is no reason to tinker with every single parameter. However, ***some of the parameters have a significant impact on memory use, performance, and reliability of the producers***. We will review those here.
+
+
+ORDERING GUARANTEES
+
+Apache Kafka preserves the order of messages within a partition. This means that if messages were sent from the producer in a specific order, the broker will write them to a partition in that order and all consumers will read them in that order. For some use cases, order is very important. There is a big difference between depositing $100 in an account and later withdrawing it, and the other way around! However, some use cases are less sensitive.
+
+Setting the retries parameter to nonzero and the max.in.flight.requests.per.connection to more than one means that it is possible that the broker will fail to write the first batch of messages, succeed to write the second (which was already in-flight), and then retry the first batch and succeed, thereby reversing the order.
+
+Usually, setting the number of retries to zero is not an option in a reliable system, so if guaranteeing order is critical, we recommend setting in.flight.requests.per.session=1 to make sure that while a batch of messages is retrying, additional messages will not be sent (because this has the potential to reverse the correct order). This will severely limit the throughput of the producer, so only use this when order is important.
+
+
+
+
+For these reasons, we recommend using existing serializers and deserializers such as JSON, Apache Avro, Thrift, or Protobuf. 
+
+
+https://learning.oreilly.com/library/view/kafka-the-definitive/9781491936153/ch04.html
+
