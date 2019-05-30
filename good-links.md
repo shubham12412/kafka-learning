@@ -19,3 +19,6 @@ https://stackoverflow.com/questions/39131465/how-does-an-offset-expire-for-an-ap
 https://issues.apache.org/jira/browse/KAFKA-3806
 https://issues.apache.org/jira/browse/KAFKA-4682
 
+
+
+http://kafka.apache.org/protocol.html
