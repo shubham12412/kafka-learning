@@ -22,3 +22,6 @@ https://issues.apache.org/jira/browse/KAFKA-4682
 
 
 http://kafka.apache.org/protocol.html
+
+https://stackoverflow.com/questions/49276785/monitoring-ui-for-apache-kafka-kafka-manager-vs-kafka-monitor
+
