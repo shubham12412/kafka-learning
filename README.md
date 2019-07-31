@@ -8,3 +8,5 @@ https://www.confluent.io/blog/event-streaming-platform-2
 
 https://cwiki.apache.org/confluence/display/KAFKA/KIP-186%3A+Increase+offsets+retention+default+to+7+days
 
+https://kafka.apache.org/23/javadoc/index.html?org/apache/kafka/clients/consumer/KafkaConsumer.html
+
