@@ -15,6 +15,8 @@ https://kafka.apache.org/23/javadoc/index.html?org/apache/kafka/clients/consumer
 -------------------------------------------------------------------------------------------------------------
 #### consumer settings doubts
 
+https://stackoverflow.com/questions/39730126/difference-between-session-timeout-ms-and-max-poll-interval-ms-for-kafka-0-10-0
+
 https://stackoverflow.com/questions/19588090/kafka-long-polling
 
 https://kafka.apache.org/21/javadoc/org/apache/kafka/clients/consumer/KafkaConsumer.html
