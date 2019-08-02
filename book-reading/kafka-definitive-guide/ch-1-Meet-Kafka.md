@@ -131,10 +131,57 @@ Expansions can be performed while the cluster is online, with no impact on the a
 
 ----------------------------------------------------------------------------------------------------------------------
 
-### The Data Ecosystem
+
+producers do not need to be concerned about who is using the data or the number of consuming applications.
+
+### Use Cases
+
+### ACTIVITY TRACKING
+***The original use case for Kafka, as it was designed at LinkedIn, is that of user activity tracking. A website’s users interact with frontend applications, which generate messages regarding actions the user is taking. This can be passive information, such as page views and click tracking, or it can be more complex actions, such as information that a user adds to their profile***. The messages are published to one or more topics, which are then consumed by applications on the backend. These applications may be generating reports, feeding machine learning systems, updating search results, or performing other operations that are necessary to provide a rich user experience.
+
+
+### MESSAGING
+Kafka is also used for messaging, where applications need to send notifications (such as emails) to users. Those applications can produce messages without needing to be concerned about formatting or how the messages will actually be sent. A single application can then read all the messages to be sent and handle them consistently, including:
+
+Formatting the messages (also known as decorating) using a common look and feel \
+Collecting multiple messages into a single notification to be sent \
+Applying a user’s preferences for how they want to receive messages
+
+Using a single application for this avoids the need to duplicate functionality in multiple applications, as well as allows operations like aggregation which would not otherwise be possible.
+
+### METRICS AND LOGGING
+Kafka is also ideal for collecting application and system metrics and logs. This is a use case in which the ability to have multiple applications producing the same type of message shines. ***Applications publish metrics on a regular basis to a Kafka topic, and those metrics can be consumed by systems for monitoring and alerting. They can also be used in an offline system like Hadoop to perform longer-term analysis, such as growth projections. Log messages can be published in the same way, and can be routed to dedicated log search systems like Elasticsearch or security analysis applications***. Another added benefit of Kafka is that when the destination system needs to change (e.g., it’s time to update the log storage system), there is no need to alter the frontend applications or the means of aggregation.
+
+
+### COMMIT LOG
+***Since Kafka is based on the concept of a commit log, database changes can be published to Kafka and applications can easily monitor this stream to receive live updates as they happen***. This changelog stream can also be used for replicating database updates to a remote system, or for consolidating changes from multiple applications into a single database view. Durable retention is useful here for providing a buffer for the changelog, meaning it can be replayed in the event of a failure of the consuming applications. ***Alternately, log-compacted topics can be used to provide longer retention by only retaining a single change per key.***
+
+### STREAM PROCESSING
+Another area that provides numerous types of applications is stream processing. ***While almost all usage of Kafka can be thought of as stream processing, the term is typically used to refer to applications that provide similar functionality to map/reduce processing in Hadoop. Hadoop usually relies on aggregation of data over a long time frame, either hours or days. Stream processing operates on data in real time, as quickly as messages are produced***. 
+
+Stream frameworks allow users to write small applications to operate on Kafka messages, performing tasks such as counting metrics, partitioning messages for efficient processing by other applications, or transforming messages using data from multiple sources.
 
 
 
+
+---------------------------------------------------------------------------------------------------------------------
+
+### Kafka’s Origin
+Kafka was created to address the data pipeline problem at LinkedIn. It was designed to provide a high-performance messaging system that can handle many types of data and provide clean, structured data about user activity and system metrics in real time.
+
+
+### The Birth of Kafka
+create a messaging system that could meet the needs of both the monitoring and tracking systems, and scale for the future. The primary goals were to:
+
+1) Decouple producers and consumers by using a push-pull model
+
+2) Provide persistence for message data within the messaging system to allow multiple consumers
+
+3) Optimize for high throughput of messages
+
+4) Allow for horizontal scaling of the system to grow as the data streams grew
+
+The result was a publish/subscribe messaging system that had an interface typical of messaging systems but a storage layer more like a log-aggregation system. Combined with the adoption of Apache Avro for message serialization, Kafka was effective for handling both metrics and user-activity tracking at a scale of billions of messages per day. The scalability of Kafka has helped LinkedIn’s usage grow in excess of one trillion messages produced (as of August 2015) and over a petabyte of data consumed daily.
 
 
 
