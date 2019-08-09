@@ -25,3 +25,7 @@ http://kafka.apache.org/protocol.html
 
 https://stackoverflow.com/questions/49276785/monitoring-ui-for-apache-kafka-kafka-manager-vs-kafka-monitor
 
+
+
+https://stackoverflow.com/questions/51375187/why-kafka-is-not-p-in-cap-theorem/51379079
+
