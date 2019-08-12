@@ -168,5 +168,37 @@ In Chapter 3 we discussed how to write error handlers for both sync and async me
 ------------------------------------------------------------------------------------------------------------------------
 
 
+### Using Consumers in a Reliable System
+Now that we have learned how to produce data while taking Kafka’s reliability guarantees into account, it is time to see how to consume data.
+
+As we saw in the first part of this chapter, ***data is only available to consumers after it has been committed to Kafka—meaning it was written to all in-sync replicas. This means that consumers get data that is guaranteed to be consistent***. The only thing consumers are left to do is make sure they keep track of which messages they’ve read and which messages they haven’t. This is key to not losing messages while consuming them.
+
+
+When reading data from a partition, a consumer is fetching a batch of events, checking the last offset in the batch, and then requesting another batch of events starting from the last offset received. This guarantees that a Kafka consumer will always get new data in correct order without missing any events.
+
+***When a consumer stops, another consumer needs to know where to pick up the work—what was the last offset that the previous consumer processed before it stopped? The “other” consumer can even be the original one after a restart. It doesn’t really matter—some consumer is going to pick up consuming from that partition, and it needs to know in which offset to start. This is why consumers need to “commit” their offsets. For each partition it is consuming, the consumer stores its current location, so they or another consumer will know where to continue after a restart. The main way consumers can lose messages is when committing offsets for events they’ve read but didn’t completely process yet. This way, when another consumer picks up the work, it will skip those events and they will never get processed. This is why paying careful attention to when and how offsets get committed is critical.***
+
+
+#### COMMITTED MESSAGES VERSUS COMMITED OFFSETS
+This is different from a committed message, which, as discussed previously, is a message that was written to all in-sync replicas and is available to consumers. Committed offsets are offsets the consumer sent to Kafka to acknowledge that it received and processed all the messages in a partition up to this specific offset.
+
+------------------------------------------------------------------------------------------------------------------
+
+### Important Consumer Configuration Properties for Reliable Processing
+There are four consumer configuration properties that are important to understand in order to configure your consumer for a desired reliability behavior.
+
+The first is group.id, as explained in great detail in Chapter 4. The basic idea is that if two consumers have the same group ID and subscribe to the same topic, each will be assigned a subset of the partitions in the topic and will therefore only read a subset of the messages individually (but all the messages will be read by the group as a whole). If you need a consumer to see, on its own, every single message in the topics it is subscribed to—it will need a unique group.id.
+
+The second relevant configuration is auto.offset.reset. This parameter controls what the consumer will do when no offsets were committed (e.g., when the consumer first starts) or when the consumer asks for offsets that don’t exist in the broker (Chapter 4 explains how this can happen). There are only two options here. If you choose earliest, the consumer will start from the beginning of the partition whenever it doesn’t have a valid offset. This can lead to the consumer processing a lot of messages twice, but it guarantees to minimize data loss. If you choose latest, the consumer will start at the end of the partition. This minimizes duplicate processing by the consumer but almost certainly leads to some messages getting missed by the consumer.
+
+The third relevant configuration is enable.auto.commit. This is a big decision: are you going to let the consumer commit offsets for you based on schedule, or are you planning on committing offsets manually in your code? The main benefit of automatic offset commits is that it’s one less thing to worry about when implementing your consumers. If you do all the processing of consumed records within the consumer poll loop, then the automatic offset commit guarantees you will never commit an offset that you didn’t process. (If you are not sure what the consumer poll loop is, refer back to Chapter 4.) The main drawbacks of automatic offset commits is that you have no control over the number of duplicate records you may need to process (because your consumer stopped after processing some records but before the automated commit kicked in). If you do anything fancy like pass records to another thread to process in the background, the automatic commit may commit offsets for records the consumer has read but perhaps did not process yet.
+
+The fourth relevant configuration is tied to the third, and is auto.commit.interval.ms. If you choose to commit offsets automatically, this configuration lets you configure how frequently they will be committed. The default is every five seconds. In general, committing more frequently adds some overhead but reduces the number of duplicates that can occur when a consumer stops.
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+
 
 
